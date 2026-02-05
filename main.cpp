@@ -1,13 +1,10 @@
 #include <iostream>
 #include <thread>
-#include <atomic>
 #include <random>
 
 using std::chrono::duration_cast;
 using std::chrono::high_resolution_clock;
 using std::chrono::nanoseconds;
-
-std::atomic<double> execution_duration{0};
 
 std::vector<std::vector<int>> generate_matrix(int rows, int cols) {
     std::vector matrix(rows, std::vector<int>(cols));
@@ -91,14 +88,76 @@ bool final_check(std::vector<std::vector<int>> &matrixA, std::vector<std::vector
     return true;
 }
 
+void matrix_mult_chunk(const int start, const int end, const int k, std::vector<std::vector<int>> &matrix) {
+    for (int i = start; i < end; i++) {
+        for (int j = 0; j < matrix[i].size(); j++) {
+            matrix[i][j] = matrix[i][j] * k;
+        }
+    }
+}
+
+void matrix_sub_chunk(const int start, const int end, std::vector<std::vector<int>> &matrixA, const std::vector<std::vector<int>> &matrixB) {
+    for (int i = start; i < end; i++) {
+        for (int j = 0; j < matrixA[i].size(); j++) {
+            matrixA[i][j] = matrixA[i][j] - matrixB[i][j];
+        }
+    }
+}
+
+void multi_matrix_threads(std::vector<std::vector<int>> &matrix, const int rows, const int k) {
+    int threads_cnt = 4;
+
+    std::vector<std::thread> threads;
+    int rows_thread = rows / threads_cnt;
+    int current = 0;
+
+    for (int i = 0; i < threads_cnt; i++) {
+        int end = current + rows_thread;
+        if (i == threads_cnt - 1) {
+            end = rows;
+        }
+        threads.emplace_back(matrix_mult_chunk, current, end, k, std::ref(matrix));
+        current = end;
+    }
+
+    for (auto & thread : threads) {
+        thread.join();
+    }
+}
+
+void sub_matrix_threads(std::vector<std::vector<int>> &matrixA, std::vector<std::vector<int>> &matrixB, const int rows) {
+    int threads_cnt = 4;
+
+    std::vector<std::thread> threads;
+    int rows_thread = rows / threads_cnt;
+    int current = 0;
+
+    for (int i = 0; i < threads_cnt; i++) {
+        int end = current + rows_thread;
+        if (i == threads_cnt - 1) {
+            end = rows;
+        }
+        threads.emplace_back(matrix_sub_chunk, current, end, std::ref(matrixA), std::ref(matrixB));
+        current = end;
+    }
+
+    for (auto & thread : threads) {
+        thread.join();
+    }
+}
+
 int main() {
-    int rows = 10, cols = 10;
+    const int rows = 1000, cols = 1000;
     std::vector<std::vector<int>> matrixA = generate_matrix(rows, cols);
     std::vector<std::vector<int>> matrixB = generate_matrix(rows, cols);
+
+    std::vector<std::vector<int>> matrixA_ini = matrixA;
+    std::vector<std::vector<int>> matrixB_ini = matrixB;
+
     std::cout << "Initial matrix A:\n";
-    print_matrix(matrixA);
+    // print_matrix(matrixA);
     std::cout << "Initial matrix B:\n";
-    print_matrix(matrixB);
+    // print_matrix(matrixB);
 
     const int k = 10;
 
@@ -113,7 +172,6 @@ int main() {
     auto subtraction_duration = duration_cast<nanoseconds>(end - start).count()*1e-9;
 
     bool check1 = check(matrixB, result, k);
-
     bool check2 = final_check(matrixA, matrixC, result);
     std::cout << "\nMatrix C=A-k*B = \n";
     print_matrix(matrixC);
@@ -133,6 +191,36 @@ int main() {
     } else {
         std::cout << "Matrix subtraction is not correct\nTime elapsed: " <<
             subtraction_duration << " seconds\n";
+    }
+
+    matrixA = matrixA_ini;
+    matrixB = matrixB_ini;
+
+    std::cout << "\n\nMulti threading multiplication: \n";
+
+    start = high_resolution_clock::now();
+    multi_matrix_threads(matrixB, rows, k);
+    end = high_resolution_clock::now();
+    auto multi_threading_duration = duration_cast<nanoseconds>(end - start).count()*1e-9;
+
+    start = high_resolution_clock::now();
+    sub_matrix_threads(matrixA, matrixB, rows);
+    end = high_resolution_clock::now();
+    auto sub_threading_duration = duration_cast<nanoseconds>(end - start).count()*1e-9;
+
+    if (check(matrixB_ini, matrixB, k)) {
+        std::cout << "Matrix multiplied by " << k << " is correct \n\tTime elapsed: " <<
+            multi_threading_duration << " seconds\n";
+    } else {
+        std::cout << "Matrix multiplied by " << k << " is not correct \n\tTime elapsed: " <<
+            multi_threading_duration << " seconds\n";
+    }
+    if (final_check(matrixA_ini, matrixB, matrixA)) {
+        std::cout << "Matrix substraction is correct \n\tTime elapsed: " <<
+            sub_threading_duration << " seconds\n";
+    } else {
+        std::cout << "Matrix substraction is not correct \n\tTime elapsed: " <<
+            sub_threading_duration << " seconds\n";
     }
     return 0;
 }
