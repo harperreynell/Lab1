@@ -86,47 +86,44 @@ void multi_threads(std::vector<std::vector<int>> &matrixA, std::vector<std::vect
     }
 }
 
-int main() {
-    constexpr int rows = 1000, cols = 1000;
+void run_size_tests(const int rows, const int cols, const int k, std::fstream &file) {
+    const std::vector<std::vector<int>> matrixA_ini = generate_matrix(rows, cols);
+    const std::vector<std::vector<int>> matrixB_ini = generate_matrix(rows, cols);
+    std::vector<std::vector<int>> matrixA = matrixA_ini;
+    std::vector<std::vector<int>> matrixB = matrixB_ini;
 
+    for (const std::vector threads = {1, 2, 4, 8, 10, 20, 40, 80, 160}; const int thread : threads) {
+        auto start = high_resolution_clock::now();
+        multi_threads(matrixA, matrixB, k, thread);
+        auto end = high_resolution_clock::now();
+        const auto duration = static_cast<double>(duration_cast<nanoseconds>(end - start).count())*1e-9;
+        const bool correct = check(k, matrixA_ini, matrixB, matrixA);
+
+        file << thread << ',' << correct << ',' << duration
+        << ',' << matrixA.size() << ',' << matrixA[0].size() << '\n';
+
+        matrixA = matrixA_ini;
+        matrixB = matrixB_ini;
+    }
+}
+
+int main() {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dis(-1000, 1000);
 
     const int k = static_cast<int>(dis(gen));
 
-    const std::vector<std::vector<int>> matrixA_ini = generate_matrix(rows, cols);
-    const std::vector<std::vector<int>> matrixB_ini = generate_matrix(rows, cols);
-    std::vector<std::vector<int>> matrixA = matrixA_ini;
-    std::vector<std::vector<int>> matrixB = matrixB_ini;
-
-    auto start = high_resolution_clock::now();
-    single_thread(matrixA, matrixB, k);
-    auto end = high_resolution_clock::now();
-    const auto duration = static_cast<double>(duration_cast<nanoseconds>(end - start).count())*1e-9;
-
-    std::cout << "\nSingle thread calculation:\n";
-    if (check(k, matrixA_ini, matrixB, matrixA)) {
-        std::cout << "Matrix is correctly calculated in " << duration << " seconds\n";
-    } else {
-        std::cout << "Matrix is NOT calculated correctly in " << duration << " seconds\n";
+    std::fstream csvfile("test_results.csv");
+    if (!csvfile.is_open()) {
+        std::cout << "Unable to open file" << std::endl;
     }
+    csvfile << "threads,correct,duration,rows,cols\n";
 
-    matrixA = matrixA_ini;
-    matrixB = matrixB_ini;
-
-    std::cout << "\n\nMulti thread calculation: \n";
-
-    start = high_resolution_clock::now();
-    multi_threads(matrixA, matrixB, k);
-    end = high_resolution_clock::now();
-    const auto multi_duration = static_cast<double>(duration_cast<nanoseconds>(end - start).count())*1e-9;
-
-    if (check(k, matrixA_ini, matrixB, matrixA)) {
-        std::cout << "Matrix is correctly calculated in " << multi_duration << " seconds\n";
-    } else {
-        std::cout << "Matrix is NOT calculated correctly in " << multi_duration << " seconds\n";
-    }
+    run_size_tests(10, 10, k, csvfile);
+    run_size_tests(100, 100, k, csvfile);
+    run_size_tests(500, 500, k, csvfile);
+    run_size_tests(1000, 1000, k, csvfile);
 
     return 0;
 }
