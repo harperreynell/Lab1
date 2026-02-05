@@ -33,14 +33,15 @@ void print_matrix(std::vector<std::vector<int>> matrix) {
     }
 }
 
-void multiply_matrix(std::vector<std::vector<int>> &matrix, const int k) {
-    const int rows = matrix.size();
-    const int cols = matrix[0].size();
+std::vector<std::vector<int>> multiply_matrix(const std::vector<std::vector<int>> &matrix, const int rows, const int cols, const int k) {
+    std::vector result(rows, std::vector<int>(cols));
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            matrix[i][j] *= k;
+            result[i][j] = matrix[i][j] * k;
         }
     }
+
+    return result;
 }
 
 bool check(std::vector<std::vector<int>> &matrix, std::vector<std::vector<int>> &result_matrix, const int k) {
@@ -62,22 +63,62 @@ bool check(std::vector<std::vector<int>> &matrix, std::vector<std::vector<int>> 
     return true;
 }
 
+std::vector<std::vector<int>> substract_matrix(const::std::vector<std::vector<int>> &matrixA,const::std::vector<std::vector<int>> &matrixB, const int rows, const int cols) {
+    std::vector<std::vector<int>> result_matrix(rows, std::vector<int>(cols));
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result_matrix[i][j] = matrixA[i][j] - matrixB[i][j];
+        }
+    }
+    return result_matrix;
+}
+
+bool final_check(std::vector<std::vector<int>> &matrixA, std::vector<std::vector<int>> &matrixB, std::vector<std::vector<int>> &result_matrix) {
+    if (matrixA.size() != result_matrix.size()) {
+        return false;
+    }
+    if (matrixA[0].size() != result_matrix[0].size()) {
+        return false;
+    }
+    for (int i = 0; i < matrixA.size(); i++) {
+        for (int j = 0; j < matrixA[0].size(); j++) {
+            if (result_matrix[i][j] != matrixA[i][j] - matrixB[i][j]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 int main() {
-    std::vector<std::vector<int>> matrix = generate_matrix(10, 10);
-    std::vector<std::vector<int>> initial = matrix;
+    int rows = 10, cols = 10;
+    std::vector<std::vector<int>> matrixA = generate_matrix(rows, cols);
+    std::vector<std::vector<int>> matrixB = generate_matrix(rows, cols);
     std::cout << "Initial matrix:\n";
-    print_matrix(matrix);
+    print_matrix(matrixB);
 
     const int k = 10;
     std::cout << "\nMatrix multiplied by " << k << ":\n";
-    multiply_matrix(matrix, k);
-    print_matrix(matrix);
+    std::vector<std::vector<int>> result = multiply_matrix(matrixB, rows, cols, k);
+    print_matrix(result);
 
     std::cout << "\nMatrix check:\n";
-    if (check(initial, matrix, k)) {
-        std::cout << "Matrix multiplied by " << k << " is correct \n";
+    if (check(matrixB, result, k)) {
+        std::cout << "Matrix multiplied by " << k << " correctly \n";
     } else {
-        std::cout << "Matrix multiplied by " << k << " is NOT correct \n";
+        std::cout << "Matrix multiplied by " << k << " incorrectly \n";
+    }
+
+    std::cout << "\nMatrix C=A-k*B = \n";
+    std::vector<std::vector<int>> matrixC = substract_matrix(matrixA, result, rows, cols);
+    print_matrix(matrixC);
+
+    std::cout << "\nFinal matrix check:\n";
+    if (final_check(matrixA, matrixC, result)) {
+        std::cout << "Final matrix is correct\n";
+    } else {
+        std::cout << "Final matrix is not correct\n";
     }
     return 0;
 }
