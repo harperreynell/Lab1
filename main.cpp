@@ -95,30 +95,44 @@ int main() {
     int rows = 10, cols = 10;
     std::vector<std::vector<int>> matrixA = generate_matrix(rows, cols);
     std::vector<std::vector<int>> matrixB = generate_matrix(rows, cols);
-    std::cout << "Initial matrix:\n";
+    std::cout << "Initial matrix A:\n";
+    print_matrix(matrixA);
+    std::cout << "Initial matrix B:\n";
     print_matrix(matrixB);
 
     const int k = 10;
-    std::cout << "\nMatrix multiplied by " << k << ":\n";
+
+    auto start = high_resolution_clock::now();
     std::vector<std::vector<int>> result = multiply_matrix(matrixB, rows, cols, k);
-    print_matrix(result);
+    auto end = high_resolution_clock::now();
+    auto multiplication_duration = duration_cast<nanoseconds>(end - start).count()*1e-9;
 
-    std::cout << "\nMatrix check:\n";
-    if (check(matrixB, result, k)) {
-        std::cout << "Matrix multiplied by " << k << " correctly \n";
-    } else {
-        std::cout << "Matrix multiplied by " << k << " incorrectly \n";
-    }
-
-    std::cout << "\nMatrix C=A-k*B = \n";
+    start = high_resolution_clock::now();
     std::vector<std::vector<int>> matrixC = substract_matrix(matrixA, result, rows, cols);
+    end = high_resolution_clock::now();
+    auto subtraction_duration = duration_cast<nanoseconds>(end - start).count()*1e-9;
+
+    bool check1 = check(matrixB, result, k);
+
+    bool check2 = final_check(matrixA, matrixC, result);
+    std::cout << "\nMatrix C=A-k*B = \n";
     print_matrix(matrixC);
 
-    std::cout << "\nFinal matrix check:\n";
-    if (final_check(matrixA, matrixC, result)) {
-        std::cout << "Final matrix is correct\n";
+    std::cout << "\nMatrix check:\n";
+    if (check1) {
+        std::cout << "Matrix multiplication by " << k << " is correct \n\tTime elapsed: " <<
+            multiplication_duration << " seconds\n";
     } else {
-        std::cout << "Final matrix is not correct\n";
+        std::cout << "Matrix multiplication by " << k << " is not correct \n\tTime elapsed: " <<
+            multiplication_duration << " seconds\n";
+    }
+
+    if (check2) {
+        std::cout << "Matrix subtraction is correct\nTime elapsed: " <<
+            subtraction_duration << " seconds\n";
+    } else {
+        std::cout << "Matrix subtraction is not correct\nTime elapsed: " <<
+            subtraction_duration << " seconds\n";
     }
     return 0;
 }
