@@ -39,12 +39,23 @@ void threading_chunk(std::vector<std::vector<int>> &matrixA, const std::vector<s
     }
 }
 
-void print_matrix(const std::vector<std::vector<int>> &matrix) {
-    for (auto & row : matrix) {
-        for (auto & element : row) {
-            std::cout << element << " ";
+void multi_threads(std::vector<std::vector<int>> &matrixA, std::vector<std::vector<int>> &matrixB, const int k, const int threads_cnt=4) {
+    const int rows = static_cast<int>(matrixA.size());
+    std::vector<std::thread> threads;
+    int rows_thread = rows / threads_cnt;
+    int current = 0;
+
+    for (int i = 0; i < threads_cnt; i++) {
+        int end = current + rows_thread;
+        if (i == threads_cnt - 1) {
+            end = rows;
         }
-        std::cout << std::endl;
+        threads.emplace_back(threading_chunk, std::ref(matrixA), std::ref(matrixB), k, current, end);
+        current = end;
+    }
+
+    for (auto & thread : threads) {
+        thread.join();
     }
 }
 
@@ -64,26 +75,6 @@ bool check(const int k, const std::vector<std::vector<int>> &matrixA, const std:
     }
 
     return true;
-}
-
-void multi_threads(std::vector<std::vector<int>> &matrixA, std::vector<std::vector<int>> &matrixB, const int k, const int threads_cnt=4) {
-    const int rows = static_cast<int>(matrixA.size());
-    std::vector<std::thread> threads;
-    int rows_thread = rows / threads_cnt;
-    int current = 0;
-
-    for (int i = 0; i < threads_cnt; i++) {
-        int end = current + rows_thread;
-        if (i == threads_cnt - 1) {
-            end = rows;
-        }
-        threads.emplace_back(threading_chunk, std::ref(matrixA), std::ref(matrixB), k, current, end);
-        current = end;
-    }
-
-    for (auto & thread : threads) {
-        thread.join();
-    }
 }
 
 void run_size_tests(const int rows, const int cols, const int k, std::fstream &file) {
